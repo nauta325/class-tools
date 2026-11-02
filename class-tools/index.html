@@ -383,14 +383,32 @@ function 알림(el, 글, 나쁜가) {
 }
 
 // ── 탭 ─────────────────────────────────────────────────
+// ★ 결과(#out)와 인쇄 단추(#actions)는 **탭마다 하나**가 아니라 아래에 **하나**뿐입니다.
+//   그래서 탭을 옮기면 **아까 만든 시험지가 스캐너 화면 밑에 그대로 남아** 있었습니다
+//   (원장님이 쓰시다 찾으셨습니다). 그 상태로 📥 를 누르면 엉뚱한 게 인쇄됩니다.
+//   지우지는 않고 **숨깁니다** — 원래 탭으로 돌아오면 그대로 다시 보입니다.
+let 현재탭 = "words";
+let 결과탭 = null;            // 지금 #out 에 든 결과가 **어느 탭** 것인가
+function 결과보임() {
+  const 보임 = Boolean(결과탭) && 결과탭 === 현재탭;
+  $("actions").classList.toggle("hide", !보임);
+  $("out").classList.toggle("hide", !보임);
+}
+function 결과냄(탭) {         // 결과를 새로 그렸을 때
+  결과탭 = 탭;
+  결과보임();
+}
+
 for (const t of document.querySelectorAll(".tab")) {
   t.onclick = () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
+    현재탭 = t.dataset.t;
     $("p-words").classList.toggle("hide", t.dataset.t !== "words");
     $("p-psg").classList.toggle("hide", t.dataset.t !== "psg");
     $("p-scan").classList.toggle("hide", t.dataset.t !== "scan");
     $("p-exam").classList.toggle("hide", true);               // 객관식 채점은 선물에서 뺐습니다
     $("p-vocab").classList.toggle("hide", t.dataset.t !== "vocab");
+    결과보임();
     if (t.dataset.t === "scan" || t.dataset.t === "vocab") 잠금확인();
     if (t.dataset.t === "vocab") 채점준비();
   };
@@ -498,7 +516,7 @@ $("wGo").onclick = () => {
   }
   html += 정답지(묶음, 제목);
   $("out").innerHTML = html;
-  $("actions").classList.remove("hide");
+  결과냄("words");
   $("toWords").classList.add("hide");
   알림($("wMsg"), 빈뜻
     ? `시험지가 나왔습니다. <b>뜻이 빈 낱말이 ${빈뜻}개</b> 있어요 — 「뜻 채우기」를 눌러보세요.`
@@ -616,7 +634,7 @@ function 그리기지문(d) {
         d.words.map((w, i) => `<tr><td class="n">${i + 1}</td><td class="a">${esc(w.en)}</td><td>${esc(w.ko)}</td></tr>`).join("")
       }</tbody></table></div>
     </div>`;
-  $("actions").classList.remove("hide");
+  결과냄("psg");
   $("toWords").classList.remove("hide");
   $("out").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -794,7 +812,7 @@ function 그리기스캔(d) {
       <div class="meta">${d.vocabulary.length}개</div>
       <table class="q"><tbody>${단어}</tbody></table>
     </div>`;
-  $("actions").classList.remove("hide");
+  결과냄("scan");
   $("toWords").classList.remove("hide");
   $("toXlsx").classList.remove("hide");
   $("out").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -966,7 +984,7 @@ async function 오답프린트(examId, studentId) {
         <td><b>${it.kind === "essay" ? esc(it.model || "—") : 동글(it.answers)}</b></td>
         <td style="font-size:12.5px">${esc(it.why || "")}</td></tr>`).join("")}</tbody></table>
     </div>`;
-    $("actions").classList.remove("hide");
+    결과냄("exam");
     $("toWords").classList.add("hide"); $("toXlsx").classList.add("hide");
     $("out").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) { 알림($("exMsg"), esc(e.message), true); }
@@ -1215,7 +1233,8 @@ $("lGo").onclick = async () => {
 
 $("clear").onclick = () => {
   $("out").innerHTML = "";
-  $("actions").classList.add("hide");
+  결과탭 = null;
+  결과보임();
   $("toXlsx").classList.add("hide");
 };
 </script>

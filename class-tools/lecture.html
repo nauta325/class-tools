@@ -1,0 +1,375 @@
+<!doctype html>
+<!--
+  🎙 선생님 목소리 카드 강의 — 학생이 듣는 화면 (+ 선생님 현황)
+
+  ★ 강의 내용은 **파일**에서 옵니다 — lecture-data/목록.json · lecture-data/<단원>.json
+    소리는 lecture-audio/<단원>/cK.mp3. 만드는 건 voice-lecture/목소리_만들기.py 입니다.
+  ★ 판서 줄은 **그 말을 할 때** 나타납니다 (lines[].at = 초). 순서를 바꾸지 마세요 —
+    말과 글이 어긋나면 아이가 못 따라옵니다.
+  ★ **마지막 카드까지 들어야** 「다 들었어요」가 나옵니다. 건너뛰기를 넣지 마세요.
+  ★ 폰에서 듣습니다. 버튼을 작게 만들지 마세요.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카드 강의</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{ --green:#1f7a70; --ink:#1b2a27; --muted:#677872; --line:#dfe6e3; --bg:#f6f8f7; --card:#fff;
+         --bad:#c0392b; --badbg:#fdf0ee; --okbg:#eef7f2; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:16px;word-break:keep-all;
+       font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-text-size-adjust:100%}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 90px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 16px;margin-bottom:12px}
+  h1{font-size:20px;font-weight:900;margin:0 0 4px}
+  h2{font-size:17px;font-weight:900;margin:0 0 4px}
+  .lead{color:var(--muted);font-size:14px;margin:0 0 14px}
+  label{display:block;font-size:14px;font-weight:800;margin:12px 0 6px}
+  input{width:100%;font-family:inherit;font-size:16px;color:var(--ink);background:#fff;
+        border:1.5px solid var(--line);border-radius:10px;padding:12px}
+  input:focus{outline:none;border-color:var(--green)}
+  .btn{width:100%;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;border:none;
+       border-radius:12px;background:var(--green);color:#fff;padding:15px}
+  .btn:disabled{opacity:.5}
+  .btn.ghost{background:#fff;color:var(--green);border:1.5px solid var(--green)}
+  .btn.sm{font-size:14px;padding:11px}
+  .row{display:flex;gap:8px;margin-top:10px}
+  .msg{border-radius:10px;padding:12px 14px;margin:10px 0;font-size:14px}
+  .msg.bad{background:var(--badbg);border:1px solid #f0c9bd;color:#7a2d18}
+  .msg.ok{background:var(--okbg);border:1px solid #cfe6da}
+  .hide{display:none}
+
+  /* 단원 목록 */
+  .unit{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+        background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px;
+        font-family:inherit;font-size:16px;color:var(--ink)}
+  .unit:hover{border-color:var(--green)}
+  .unit b{display:block;font-weight:800}
+  .unit .st{margin-left:auto;font-size:13px;font-weight:800;color:var(--muted);white-space:nowrap}
+  .unit .st.done{color:var(--green)}
+
+  /* 카드 강의 */
+  .lvhd{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+  .lvhd #lvT{font-weight:900;font-size:17px}
+  .lvhd #lvN{margin-left:auto;font-family:'Space Mono',monospace;font-size:13px;color:var(--muted)}
+  .lvscr{min-height:230px;background:#fbfdfc;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .lvl{opacity:0;transform:translateY(5px);transition:opacity .35s,transform .35s;
+       font-size:15.5px;line-height:1.75;margin:0 0 9px;padding-left:2px}
+  .lvl.on{opacity:1;transform:none}
+  .lvl.box{background:#eef7f2;border:1px solid #cfe6da;border-radius:10px;padding:10px 12px;font-weight:700}
+  mark.lvm{background:#fff3b0;color:inherit;border-radius:4px;padding:0 3px;font-weight:800}
+  .lvbar{height:5px;background:var(--line);border-radius:999px;margin:12px 0 10px;overflow:hidden}
+  .lvbar i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+  .lvctl{display:flex;gap:7px;align-items:stretch}
+  .lvctl .btn{padding:14px 8px;font-size:15px}
+  .lvctl .btn.ic{flex:0 0 52px;font-size:17px}
+  .lvdots{display:flex;gap:7px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .lvdots span{width:13px;height:13px;border-radius:50%;background:var(--line);cursor:pointer}
+  .lvdots span.ok{background:#9ecfbd}
+  .lvdots span.on{background:var(--green);transform:scale(1.25)}
+
+  /* 선생님 현황 */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left}
+  th{font-size:12.5px;color:var(--muted);font-weight:800}
+  td.n{font-family:'Space Mono',monospace;font-weight:700;text-align:center;white-space:nowrap}
+  td.n.done{color:var(--green)}
+  td.n.zero{color:var(--line)}
+  .foot{text-align:center;font-size:13px;color:var(--muted);margin-top:18px}
+  .foot a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ① 로그인 -->
+  <div id="vLogin">
+    <div class="card">
+      <h1>🎙 카드 강의</h1>
+      <p class="lead">선생님 목소리로 설명을 듣고, 말에 맞춰 판서가 나타납니다.</p>
+      <label for="sid">학생번호</label>
+      <input id="sid" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="예) 2024001">
+      <label for="pin">비밀번호 (출결 PIN)</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="숫자 4자리">
+      <div id="loginMsg"></div>
+      <div class="row"><button class="btn" id="loginBtn">듣기 시작</button></div>
+      <div class="foot"><a href="#" id="toTeacher">선생님이신가요?</a></div>
+    </div>
+  </div>
+
+  <!-- ② 단원 고르기 -->
+  <div id="vUnits" class="hide">
+    <div class="card">
+      <h1 id="hiName">안녕하세요</h1>
+      <p class="lead">들을 단원을 고르세요. 끝까지 들은 카드는 ●로 표시됩니다.</p>
+      <div id="unitList"></div>
+      <div class="foot"><a href="#" id="toTeacher2">선생님이신가요?</a></div>
+    </div>
+  </div>
+
+  <!-- ③ 강의 -->
+  <div id="vPlay" class="hide">
+    <div class="card">
+      <div class="lvhd"><span id="lvT"></span><span id="lvN"></span></div>
+      <div class="lvscr" id="lvScr"></div>
+      <div class="lvbar"><i id="lvBar"></i></div>
+      <div class="lvctl">
+        <button class="btn ghost ic" id="bPrev" title="이전 카드">⏮</button>
+        <button class="btn" id="bPlay">▶ 강의 시작</button>
+        <button class="btn ghost ic" id="bAgain" title="이 카드 다시 듣기">↺</button>
+        <button class="btn ghost ic" id="bNext" title="다음 카드">⏭</button>
+        <button class="btn ghost ic" id="bSpeed" title="빠르기">1.0×</button>
+      </div>
+      <div class="lvdots" id="lvDots"></div>
+      <div id="playMsg"></div>
+      <div id="doneBox" class="hide">
+        <div class="msg ok"><b>✅ 강의를 다 들었어요.</b> 이제 문제로 넘어가세요.</div>
+      </div>
+      <div class="row"><button class="btn ghost sm" id="bBack">← 단원 목록</button></div>
+    </div>
+  </div>
+
+  <!-- ④ 선생님 현황 -->
+  <div id="vTeacher" class="hide">
+    <div class="card">
+      <h1>👩‍🏫 강의 현황</h1>
+      <p class="lead">학생마다 단원별로 <b>끝까지 들은 카드 수</b>입니다.</p>
+      <div id="tLogin">
+        <label for="tpass">선생님 비밀번호</label>
+        <input id="tpass" type="password" autocomplete="off">
+        <div class="row"><button class="btn" id="tBtn">보기</button></div>
+      </div>
+      <div id="tMsg"></div>
+      <div id="tTable"></div>
+      <div class="foot"><a href="#" id="toStudent">← 학생 화면</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const 보이기 = (id) => ["vLogin", "vUnits", "vPlay", "vTeacher"].forEach((v) =>
+  $(v).classList.toggle("hide", v !== id));
+function 알림(칸, 글, 나쁜가) {
+  $(칸).innerHTML = 글 ? `<div class="msg ${나쁜가 ? "bad" : "ok"}">${글}</div>` : "";
+}
+
+// 로그인 정보는 **이 화면에만** 둡니다 (새로 고치면 다시 넣습니다 — 폰을 같이 쓰는 경우가 많아서요)
+let 나 = null;        // {studentId, pin, name, heard:{단원:[카드…]}}
+let 목록 = [];        // [{단원, 제목, 카드수}]
+
+async function 서버(body) {
+  const r = await fetch("/api/lecture", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+  });
+  let d = {};
+  try { d = await r.json(); } catch (e) { /* 빈 응답 */ }
+  if (!r.ok) throw new Error(d.error || `서버 오류 ${r.status}`);
+  return d;
+}
+
+// ── ① 로그인 ──────────────────────────────────────────
+$("loginBtn").onclick = async () => {
+  const studentId = $("sid").value.trim(), pin = $("pin").value.trim();
+  if (!studentId || !pin) return 알림("loginMsg", "학생번호와 비밀번호를 넣어주세요.", true);
+  $("loginBtn").disabled = true;
+  알림("loginMsg", "");
+  try {
+    const d = await 서버({ action: "me", studentId, pin });
+    나 = { studentId, pin, name: d.name, heard: d.heard || {} };
+    await 목록불러오기();
+    단원그리기();
+  } catch (e) {
+    알림("loginMsg", esc(e.message), true);
+  }
+  $("loginBtn").disabled = false;
+};
+$("pin").onkeydown = (e) => { if (e.key === "Enter") $("loginBtn").click(); };
+
+// ── ② 단원 목록 ───────────────────────────────────────
+async function 목록불러오기() {
+  try {
+    const r = await fetch("lecture-data/목록.json", { cache: "no-store" });
+    목록 = r.ok ? await r.json() : [];
+  } catch (e) { 목록 = []; }
+}
+
+function 단원그리기() {
+  보이기("vUnits");
+  $("hiName").textContent = `${나.name || ""} 안녕하세요`;
+  if (!목록.length) {
+    $("unitList").innerHTML = `<div class="msg bad">아직 올라온 강의가 없습니다.
+      <br><br>선생님께: <b>voice-lecture/README.md</b> 를 보고 목소리를 만들면
+      여기에 단원이 나타납니다.</div>`;
+    return;
+  }
+  $("unitList").innerHTML = 목록.map((u) => {
+    const 들음 = (나.heard[u.단원] || []).length;
+    const 다 = 들음 >= u.카드수;
+    return `<button class="unit" data-u="${esc(u.단원)}">
+      <span><b>${esc(u.제목)}</b><span class="lead" style="margin:0">카드 ${u.카드수}장</span></span>
+      <span class="st ${다 ? "done" : ""}">${다 ? "✅ 다 들었어요" : `${들음} / ${u.카드수}`}</span>
+    </button>`;
+  }).join("");
+  $("unitList").querySelectorAll(".unit").forEach((b) => {
+    b.onclick = () => 단원열기(b.dataset.u);
+  });
+}
+
+// ── ③ 카드 강의 ───────────────────────────────────────
+// 판서 글자: <b> 과 <br> 만 살리고, {{…}} 는 형광펜으로 바꿉니다.
+const 판서글 = (h) => esc(h)
+  .replace(/&lt;(\/?)b&gt;/g, "<$1b>")
+  .replace(/&lt;br&gt;/g, "<br>")
+  .replace(/\{\{([\s\S]+?)\}\}/g, '<mark class="lvm">$1</mark>');
+
+const 소리 = new Audio();
+let lv = null;   // {단원, 카드들, i, rate, 다음}
+
+async function 단원열기(단원) {
+  try {
+    const r = await fetch(`lecture-data/${encodeURIComponent(단원)}.json`, { cache: "no-store" });
+    if (!r.ok) throw new Error("강의 파일을 못 찾았습니다.");
+    const d = await r.json();
+    const 카드들 = (d.카드 || []).filter((c) => c.만듦 && c.audio);
+    if (!카드들.length) throw new Error("이 단원은 아직 목소리가 안 만들어졌습니다.");
+    lv = { 단원, 카드들, i: 0, rate: lv ? lv.rate : 1 };
+    보이기("vPlay");
+    알림("playMsg", "");
+    $("doneBox").classList.toggle("hide", !다들었나());
+    $("bSpeed").textContent = lv.rate.toFixed(1) + "×";
+    카드보이기(0, false);
+  } catch (e) {
+    알림("unitList", esc(e.message), true);
+  }
+}
+
+const 들은카드 = () => (나.heard[lv.단원] || []);
+const 다들었나 = () => lv && 들은카드().length >= lv.카드들.length;
+
+function 카드보이기(i, 틀기) {
+  if (!lv) return;
+  i = Math.max(0, Math.min(lv.카드들.length - 1, i));
+  lv.i = i;
+  const c = lv.카드들[i], 들음 = 들은카드();
+  $("lvT").textContent = `🎙 ${i + 1}. ${c.t}`;
+  $("lvN").textContent = `${i + 1} / ${lv.카드들.length}`;
+  $("lvScr").innerHTML = (c.lines || []).map((l, j) =>
+    `<div class="lvl ${l.c || ""}" id="lvl${j}">${판서글(l.h)}</div>`).join("");
+  $("lvDots").innerHTML = lv.카드들.map((_, j) =>
+    `<span class="${j === i ? "on" : 들음.includes(j + 1) ? "ok" : ""}" data-j="${j}"></span>`).join("");
+  $("lvDots").querySelectorAll("span").forEach((s) => {
+    s.onclick = () => 카드보이기(Number(s.dataset.j), true);
+  });
+  clearTimeout(lv.다음);
+  소리.pause();
+  소리.src = c.audio;
+  소리.playbackRate = lv.rate;
+  째깍();
+  if (틀기) 소리.play().catch(() => 알림("playMsg", "소리를 켤 수 없어요 — ▶ 를 한 번 더 눌러 보세요.", true));
+}
+
+function 째깍() {
+  if (!lv || !lv.카드들[lv.i]) return;
+  const c = lv.카드들[lv.i], t = 소리.currentTime || 0;
+  (c.lines || []).forEach((l, j) => {
+    const el = $("lvl" + j);
+    if (el) el.classList.toggle("on", t >= (l.at || 0) - 0.05);
+  });
+  $("lvBar").style.width = Math.min(100, (t / (소리.duration || c.dur || 1)) * 100) + "%";
+}
+
+// ★ 카드를 **끝까지** 들었을 때만 기록합니다 (건너뛰면 안 셉니다)
+async function 끝났다() {
+  if (!lv) return;
+  const i = lv.i, 번호 = i + 1;
+  (lv.카드들[i].lines || []).forEach((_, j) => {
+    const el = $("lvl" + j);
+    if (el) el.classList.add("on");
+  });
+  const 들음 = (나.heard[lv.단원] = 나.heard[lv.단원] || []);
+  if (!들음.includes(번호)) {
+    들음.push(번호);
+    들음.sort((a, b) => a - b);
+    try { await 서버({ action: "heard", studentId: 나.studentId, pin: 나.pin, unit: lv.단원, card: 번호 }); }
+    catch (e) { 알림("playMsg", "기록을 못 보냈어요 (강의는 계속 들으셔도 됩니다): " + esc(e.message), true); }
+  }
+  const d = $("lvDots").querySelectorAll("span")[i];
+  if (d) d.className = i === lv.i ? "on ok" : "ok";
+  if (i < lv.카드들.length - 1) {              // 다음 카드로 저절로
+    lv.다음 = setTimeout(() => { if (lv && lv.i === i) 카드보이기(i + 1, true); }, 900);
+    return;
+  }
+  if (다들었나()) {
+    $("doneBox").classList.remove("hide");
+    $("doneBox").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+소리.ontimeupdate = 째깍;
+소리.onended = 끝났다;
+소리.onplay = 소리.onpause = () => { $("bPlay").textContent = 소리.paused ? "▶ 재생" : "⏸ 멈춤"; };
+$("bPlay").onclick = () => {
+  if (소리.paused) 소리.play().catch(() => 알림("playMsg", "소리를 켤 수 없어요 — 한 번 더 눌러 보세요.", true));
+  else 소리.pause();
+};
+$("bPrev").onclick = () => 카드보이기(lv.i - 1, true);
+$("bAgain").onclick = () => 카드보이기(lv.i, true);
+$("bNext").onclick = () => 카드보이기(lv.i + 1, true);
+$("bSpeed").onclick = () => {
+  lv.rate = lv.rate === 1 ? 1.2 : lv.rate === 1.2 ? 0.9 : 1;
+  소리.playbackRate = lv.rate;
+  $("bSpeed").textContent = lv.rate.toFixed(1) + "×";
+};
+$("bBack").onclick = () => { 소리.pause(); clearTimeout(lv && lv.다음); 단원그리기(); };
+
+// ── ④ 선생님 현황 ─────────────────────────────────────
+// 선생님 들어오는 길은 **두 군데** — 첫 화면과 단원 목록 (학생이 로그인한 폰에서도 보실 수 있게)
+for (const id of ["toTeacher", "toTeacher2"]) {
+  $(id).onclick = (e) => { e.preventDefault(); 소리.pause(); 보이기("vTeacher"); };
+}
+$("toStudent").onclick = (e) => { e.preventDefault(); 보이기(나 ? "vUnits" : "vLogin"); };
+
+$("tBtn").onclick = async () => {
+  $("tBtn").disabled = true;
+  알림("tMsg", "");
+  try {
+    const r = await fetch("/api/login", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pass: $("tpass").value }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || "비밀번호가 다릅니다.");
+    await 현황그리기();
+  } catch (e) {
+    알림("tMsg", esc(e.message), true);
+  }
+  $("tBtn").disabled = false;
+};
+
+async function 현황그리기() {
+  await 목록불러오기();
+  const d = await 서버({ action: "teacher" });
+  $("tLogin").classList.add("hide");
+  if (!목록.length) return 알림("tMsg", "아직 올라온 강의가 없습니다.", true);
+  if (!d.students?.length) return 알림("tMsg", "재원 학생이 없습니다. 학원 시스템의 students 표를 보세요.", true);
+  const 머리 = 목록.map((u) => `<th style="text-align:center">${esc(u.제목)}</th>`).join("");
+  const 몸 = d.students.map((s) => {
+    const 셈 = d.counts[s.student_id] || {};
+    return `<tr><td>${esc(s.name || s.student_id)}</td>` + 목록.map((u) => {
+      const n = 셈[u.단원] || 0;
+      const 끝 = n >= u.카드수;
+      return `<td class="n ${끝 ? "done" : n ? "" : "zero"}">${끝 ? "✅" : `${n}/${u.카드수}`}</td>`;
+    }).join("") + "</tr>";
+  }).join("");
+  $("tTable").innerHTML = `<table><tr><th>학생</th>${머리}</tr>${몸}</table>
+    <p class="lead" style="margin-top:12px">숫자는 <b>끝까지 들은 카드</b> 수입니다 — 건너뛴 카드는 안 셉니다.</p>`;
+}
+</script>
+</body>
+</html>

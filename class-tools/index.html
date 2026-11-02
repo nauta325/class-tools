@@ -1,0 +1,1223 @@
+<!doctype html>
+<!--
+  수업 자료 만들기 — 화면 전부가 이 파일 하나입니다. 빌드 없음.
+
+  ★ 두 도구를 한 앱에 넣은 이유: 설치를 두 번 하시게 하면 안 됩니다.
+    그리고 둘이 이어집니다 — 지문을 만들면 그 단어로 바로 시험지를 냅니다.
+
+  ★ **단어 시험지는 서버를 안 거칩니다.** 전부 브라우저에서 만듭니다 —
+    키가 없어도, 인터넷이 끊겨도 나옵니다. 매일 쓰는 기능이라서요.
+    (지문 만들기만 Claude 키가 필요합니다)
+
+  ★ 인쇄 CSS 를 가볍게 유지하세요. 브라우저는 **배경을 안 찍는 게 기본**이라
+    색으로 칠한 것은 종이에서 사라집니다. 칸은 **테두리**로 나누세요.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수업 자료 만들기</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{ --green:#1f7a70; --ink:#1b2a27; --muted:#677872; --line:#dfe6e3; --bg:#f6f8f7; --card:#fff;
+         --warn:#b4472e; --warnbg:#fff6f3; --okbg:#eef7f2; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;font-size:15px;word-break:keep-all;
+       font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif}
+  .top{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+  .top-in{max-width:1000px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{font-weight:900;font-size:17px}
+  .brand .ac{color:var(--green);font-size:12px;font-weight:700;display:block;letter-spacing:.04em}
+  .tabs{display:flex;gap:6px;margin-left:auto}
+  .tab{font-size:13.5px;font-weight:800;padding:8px 15px;border-radius:999px;border:1.5px solid var(--line);
+       background:#fff;color:var(--muted);cursor:pointer;font-family:inherit}
+  .tab.on{background:var(--green);border-color:var(--green);color:#fff}
+  .wrap{max-width:1000px;margin:0 auto;padding:18px 18px 80px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+  h2{margin:0 0 3px;font-size:18px;font-weight:900}
+  .lead{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+  label{display:block;font-size:13px;font-weight:800;margin:12px 0 5px}
+  label:first-child{margin-top:0}
+  input,select,textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:#fff;
+    border:1.5px solid var(--line);border-radius:9px;padding:9px 11px}
+  textarea{resize:vertical;line-height:1.7}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
+  .row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .btn{font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;border:none;border-radius:10px;
+       background:var(--green);color:#fff;padding:11px 18px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.ghost{background:#fff;color:var(--green);border:1.5px solid var(--green)}
+  .btn.sm{font-size:12.5px;padding:7px 12px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .warn{background:var(--warnbg);border:1px solid #f0c9bd;border-radius:9px;padding:11px 13px;margin:10px 0;font-size:13.5px;color:#7a2d18}
+  .ok{background:var(--okbg);border:1px solid #cfe6da;border-radius:9px;padding:11px 13px;margin:10px 0;font-size:13.5px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .chip{font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;border:1.5px solid var(--line);
+        background:#fff;color:var(--muted);cursor:pointer;font-family:inherit}
+  .chip.on{border-color:var(--green);color:var(--green);background:#f1f8f6}
+  .hide{display:none !important}
+  .ck{display:flex;gap:7px;align-items:center;cursor:pointer}
+  .ck input{width:auto;accent-color:var(--green)}
+  .mk{font-family:inherit;font-size:15px;border:1.5px solid var(--line);background:#fff;border-radius:8px;
+      padding:3px 9px;cursor:pointer;margin-right:3px}
+  .mk.on{border-color:var(--green);background:var(--green);color:#fff}
+  .shot{max-width:100%;border-radius:10px;border:1px solid var(--line)}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .thumbs figure{margin:0;position:relative;width:92px}
+  .thumbs img{width:92px;height:92px;object-fit:cover;border-radius:9px;border:1px solid var(--line);display:block}
+  .thumbs button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;
+    background:var(--warn);color:#fff;font-size:13px;line-height:1;cursor:pointer;font-family:inherit}
+  .thumbs figcaption{font-size:11px;color:var(--muted);text-align:center;margin-top:2px}
+  .count{font-family:'Space Mono',monospace;font-size:12.5px;color:var(--green);font-weight:700}
+
+  /* ── 만들어진 자료 (인쇄 대상) ───────────────────────── */
+  #out{margin-top:6px}
+  .sheet{background:#fff;border:1px solid var(--line);border-radius:12px;padding:26px 28px;margin-bottom:14px}
+  .sheet h3{margin:0 0 3px;font-size:17px;font-weight:900}
+  .sheet .meta{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .namebar{display:flex;gap:18px;font-size:13px;border-bottom:1.5px solid var(--ink);
+           padding-bottom:7px;margin-bottom:16px}
+  .namebar span{white-space:nowrap}
+  .namebar i{display:inline-block;min-width:88px;border-bottom:1px solid var(--line);font-style:normal}
+  table.q{width:100%;border-collapse:collapse;font-size:14px}
+  table.q td{border:1px solid var(--line);padding:9px 11px;vertical-align:middle}
+  table.q td.n{width:34px;text-align:center;color:var(--muted);font-family:'Space Mono',monospace;font-size:12.5px}
+  table.q td.a{width:42%}
+  table.q td.b{color:var(--muted)}
+  .two{column-count:2;column-gap:26px}
+  @media (max-width:640px){ .two{column-count:1} }
+  .psg{font-size:15px;line-height:2;white-space:pre-wrap;margin-bottom:16px}
+  .quiz{font-size:14px;margin-bottom:12px}
+  .quiz .qq{font-weight:700;margin-bottom:4px}
+  .quiz .cc{padding-left:14px;color:#2c3e3a}
+  .ansbox{border:1.5px dashed var(--line);border-radius:10px;padding:13px 15px;font-size:13.5px}
+  .ansbox b{color:var(--green)}
+
+  @media print{
+    body{background:#fff}
+    .top,.wrap > .card,.noprint{display:none !important}
+    .wrap{max-width:none;padding:0}
+    .sheet{border:none;border-radius:0;padding:0 0 10mm;margin:0;break-after:page}
+    .sheet:last-child{break-after:auto}
+    table.q,tr,.quiz,.ansbox{break-inside:avoid}
+    /* 브라우저는 배경을 안 찍습니다 — 색칠이 아니라 테두리로 나눠뒀습니다 */
+    a{text-decoration:none;color:inherit}
+  }
+</style>
+</head>
+<body>
+
+<div class="top"><div class="top-in">
+  <div class="brand"><span class="ac" data-academy>우리 학원</span>📝 수업 자료 만들기</div>
+  <div class="tabs">
+    <button class="tab on" data-t="words">단어 시험지</button>
+    <button class="tab" data-t="psg">지문 만들기</button>
+    <button class="tab" data-t="scan">외부지문 스캐너</button>
+    <button class="tab" data-t="vocab">단어 사진 채점</button>
+  </div>
+</div></div>
+
+<div class="wrap">
+
+<!-- ══════════ 단어 시험지 ══════════ -->
+<div class="card" id="p-words">
+  <h2>📝 단어 시험지</h2>
+  <p class="lead">단어를 붙여넣으면 시험지가 바로 나옵니다. <b>인터넷·키 없이도 됩니다.</b></p>
+
+  <label>단어 붙여넣기 <span class="count" id="wc"></span></label>
+  <textarea id="wIn" rows="9" placeholder="apple 사과
+brave 용감한
+decide 결정하다
+
+↑ 한 줄에 하나. 탭·쉼표·여러 칸 다 됩니다.
+뜻을 비워두면 「뜻 채우기」로 한 번에 채울 수 있어요."></textarea>
+  <div class="hint">엑셀·교재 파일에서 그대로 복사해 붙여넣으셔도 됩니다.</div>
+
+  <div class="row" style="margin-top:14px">
+    <div>
+      <label>시험지 종류</label>
+      <div class="chips" id="kinds">
+        <button class="chip on" data-k="en2ko">영어 → 뜻</button>
+        <button class="chip" data-k="ko2en">뜻 → 영어</button>
+        <button class="chip" data-k="mix">섞기</button>
+      </div>
+    </div>
+    <div>
+      <label>몇 문항</label>
+      <input id="wN" type="number" min="1" max="100" value="20">
+    </div>
+    <div>
+      <label>몇 벌 (순서가 다릅니다)</label>
+      <select id="wForms">
+        <option value="1">1벌</option>
+        <option value="2">2벌 (A·B형 — 옆자리 못 보게)</option>
+        <option value="3">3벌</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <div><label>시험지 제목</label><input id="wTitle" placeholder="예: Unit 5 단어시험"></div>
+    <div><label>날짜</label><input id="wDate" type="date"></div>
+  </div>
+
+  <div class="btns">
+    <button class="btn" id="wGo">시험지 만들기</button>
+    <button class="btn ghost" id="wFill">뜻 채우기 (클로드)</button>
+    <button class="btn ghost" id="wRetest">🔁 재시용으로 (틀린 것만)</button>
+  </div>
+  <div id="wMsg"></div>
+</div>
+
+<!-- ══════════ 지문 만들기 ══════════ -->
+<div class="card hide" id="p-psg">
+  <h2>📖 지문 만들기</h2>
+  <p class="lead">교재 지문을 가져오는 게 아니라 <b>새로 씁니다</b> — 저작권 걱정이 없습니다.</p>
+
+  <div class="row">
+    <div><label>주제</label><input id="pTopic" placeholder="예: 플라스틱 줄이기 / 수면과 공부"></div>
+    <div>
+      <label>레벨</label>
+      <select id="pLevel">
+        <option>초등 고학년</option><option>중1</option>
+        <option selected>중2</option><option>중3</option>
+        <option>고1</option><option>고2~3</option>
+      </select>
+    </div>
+  </div>
+  <label>꼭 들어갈 문법 (선택)</label>
+  <input id="pGram" placeholder="예: 관계대명사 which / 현재완료">
+  <div class="hint">적어두면 그 문법이 지문 안에 <b>3번 이상</b> 자연스럽게 들어갑니다.</div>
+
+  <div class="btns">
+    <button class="btn" id="pGo">지문 만들기</button>
+    <button class="btn ghost sm" id="pStatus">🔌 연결 테스트</button>
+  </div>
+  <div id="pMsg"></div>
+
+  <div class="warn" style="margin-top:14px">
+    ⚠️ <b>만든 지문은 꼭 한 번 읽어보세요.</b> AI 가 쓴 초안입니다 —
+    사실이 틀렸거나 우리 반에 안 맞는 문장이 섞일 수 있습니다.
+  </div>
+</div>
+
+<!-- ══════════ 외부지문 스캐너 ══════════ -->
+<div class="card hide" id="p-scan">
+  <h2>📷 외부지문 스캐너</h2>
+  <p class="lead">학교에서 받은 지문 사진을 올리면 <b>본문·문장별 해석·단어장</b>이 나옵니다.</p>
+
+  <div id="lockBox" class="hide">
+    <label>선생님 비밀번호</label>
+    <div style="display:flex;gap:8px">
+      <input id="pw" type="password" placeholder="원장님께 받은 비밀번호" style="flex:1">
+      <button class="btn" id="pwGo">들어가기</button>
+    </div>
+    <div class="hint">이 화면은 선생님만 씁니다. 한 번 넣으면 2주 동안 안 묻습니다.</div>
+    <div id="pwMsg"></div>
+  </div>
+
+  <div id="scanBody">
+    <label>사진 올리기 <span class="count" id="imgC"></span></label>
+    <input id="imgs" type="file" accept="image/*" multiple capture="environment">
+    <div class="hint">폰 카메라로 바로 찍어도 되고, 갤러리에서 여러 장 골라도 됩니다.
+      <b>글자가 크고 또렷하게</b> 나오게 찍어주세요.</div>
+    <div id="thumbs" class="thumbs"></div>
+
+    <div class="btns">
+      <button class="btn" id="scanGo">분석</button>
+      <button class="btn ghost" id="imgClear">사진 비우기</button>
+    </div>
+    <div id="scanMsg"></div>
+
+    <div class="warn" style="margin-top:14px">
+      ⚠️ <b>사진은 분석에만 쓰고 저장하지 않습니다.</b> 그래도 학생 이름·얼굴이 찍히지 않게 찍어주세요.
+      <br>⚠️ <b>본문이 사진과 같은지 꼭 대조하세요.</b> 흐린 글자는 <code>[?]</code> 로 나옵니다.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 자동 채점 (선생님) ══════════ -->
+<div class="card hide" id="p-exam">
+  <h2>✅ 자동 채점</h2>
+  <p class="lead">학생은 <b>종이로 풀고 답만 폰으로</b> 넣습니다. 채점은 저절로 됩니다.</p>
+
+  <div class="ok">
+    학생에게 알려줄 주소: <b><code id="examUrl">/exam.html</code></b>
+    <button class="btn ghost sm" id="copyUrl" style="margin-left:6px">📋 복사</button>
+    <br><span style="font-size:12.5px">학생은 <b>학생번호 + 출결번호</b>로 들어갑니다 — 학원 시스템과 같습니다.</span>
+  </div>
+
+  <h3 style="margin:18px 0 6px;font-size:15.5px;color:var(--green)">새 시험지 등록</h3>
+  <div class="row">
+    <div><label>시험지 이름</label><input id="exTitle" placeholder="예: 2학기 중간 대비 1회"></div>
+    <div><label>문항 수</label><input id="exN" type="number" min="1" max="100" value="20"></div>
+  </div>
+  <label>정답 붙여넣기</label>
+  <textarea id="exAns" rows="3" placeholder="1 ③ 2 ⑤ 3 ①,④ …
+또는 한 줄에 하나씩  1 3 / 2 5
+또는  1.3 2.5 3.1,4"></textarea>
+  <div class="hint">복수 정답은 <b>①,④</b> 처럼 쉼표로. 붙여넣으면 아래 표에 나뉘어 보입니다.</div>
+  <div class="btns">
+    <button class="btn ghost" id="exParse">정답 나누기</button>
+    <button class="btn" id="exSave">시험지 저장</button>
+  </div>
+  <div id="exMsg"></div>
+  <div id="exTable"></div>
+
+  <h3 style="margin:22px 0 6px;font-size:15.5px;color:var(--green)">결과 보기</h3>
+  <select id="exPick"><option value="">시험지를 고르세요</option></select>
+  <div id="exResult"></div>
+</div>
+
+<!-- ══════════ 단어 사진 채점 (선생님) ══════════ -->
+<div class="card hide" id="p-vocab">
+  <h2>✅ 단어 시험지 사진 채점</h2>
+  <p class="lead">아이는 <b>종이에 손으로</b> 쓰고, 선생님이 <b>폰으로 찍어 올리면</b> AI가 채점합니다.</p>
+
+  <div class="gift">
+    💡 <b>채점할 때마다 Claude API 가 쓰입니다</b> (사진을 읽는 데). 쓴 만큼 요금이 나가요 —
+    얼마나 나가는지는 <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>
+    의 Usage 에서 보실 수 있습니다. <b>단어 시험지는 몇 원 단위</b>지만, 반 전체를 매일 돌리면 쌓입니다 —
+    처음 며칠은 한 번씩 확인해 보세요.
+  </div>
+
+  <div class="tabs" style="margin:14px 0">
+    <button class="tab on" data-v="shot">① 사진 올려 채점</button>
+    <button class="tab" data-v="key">② 정답표 만들기</button>
+    <button class="tab" data-v="log">③ 결과 보기</button>
+  </div>
+
+  <!-- ① 사진 올려 채점 -->
+  <div id="v-shot">
+    <div class="row">
+      <div><label>학생</label><select id="vStu"><option value="">고르세요</option></select></div>
+      <div><label>교재 (머리글을 못 읽을 때만)</label><input id="vBook" placeholder="비워두면 사진에서 읽습니다"></div>
+      <div><label>Day</label><input id="vDay" placeholder="03"></div>
+      <div><label>종류</label><select id="vMode">
+        <option value="">사진에서 읽기</option>
+        <option value="meaning">뜻 쓰기 (영어가 인쇄)</option>
+        <option value="spell">스펠 쓰기 (우리말이 인쇄)</option></select></div>
+    </div>
+    <label>시험지 사진</label>
+    <input id="vImg" type="file" accept="image/*" capture="environment">
+    <div class="hint">한 장씩. <b>글자가 크고 또렷하게</b>, 그림자 없이 찍어주세요.</div>
+    <div id="vThumb" class="thumbs"></div>
+    <div class="btns"><button class="btn" id="vGo">채점하기</button></div>
+    <div id="vMsg"></div>
+    <div id="vResult"></div>
+  </div>
+
+  <!-- ② 정답표 만들기 -->
+  <div id="v-key" class="hide">
+    <div class="row">
+      <div><label>교재 이름</label><input id="kBook" placeholder="예: 능률 VOCA 중등"></div>
+      <div><label>Day</label><input id="kDay" placeholder="03"></div>
+      <div><label>종류</label><select id="kMode">
+        <option value="meaning">뜻 쓰기 (영어가 인쇄)</option>
+        <option value="spell">스펠 쓰기 (우리말이 인쇄)</option></select></div>
+    </div>
+
+    <label>① 답지 사진으로 (또는 정답을 다 쓴 시험지)</label>
+    <input id="kImg" type="file" accept="image/*" multiple capture="environment">
+    <div id="kThumb" class="thumbs"></div>
+    <div class="btns"><button class="btn ghost" id="kRead">사진에서 읽기</button></div>
+
+    <label>② 엑셀·구글시트에서 붙여넣기</label>
+    <textarea id="kPaste" rows="5" placeholder="apple 사과
+examine 살펴보다, 조사하다
+come[be] from ~ 출신이다"></textarea>
+    <div class="hint">한 줄에 하나. 뜻이 여러 개면 <b>쉼표</b>로. 교재 표기(<code>come[be] from</code>·<code>judg(e)ment</code>)는 <b>그대로</b> 적으세요 — 둘 다 정답으로 칩니다.</div>
+    <div class="btns">
+      <button class="btn ghost" id="kParse">붙여넣은 것 읽기</button>
+      <button class="btn" id="kSave">정답표 저장</button>
+    </div>
+    <div id="kMsg"></div>
+    <div id="kTable"></div>
+
+    <h3 style="margin:20px 0 6px;font-size:15.5px;color:var(--green)">내 단어장</h3>
+    <div id="kList" class="hint">아직 없습니다.</div>
+  </div>
+
+  <!-- ③ 결과 보기 -->
+  <div id="v-log" class="hide">
+    <div class="row">
+      <div><label>날짜</label><input id="lDate" type="date"></div>
+      <div><label>&nbsp;</label>
+        <label class="ck" style="font-weight:500;font-size:13.5px">
+          <input id="lRetest" type="checkbox"> 오늘 재시 학생만</label></div>
+    </div>
+    <div class="btns"><button class="btn ghost" id="lGo">불러오기</button></div>
+    <div id="lList"></div>
+    <div id="lOne"></div>
+  </div>
+</div>
+
+<!-- ══════════ 결과 ══════════ -->
+<div class="card noprint hide" id="actions">
+  <div class="btns" style="margin:0">
+    <button class="btn" onclick="window.print()">📥 인쇄 · PDF로 저장</button>
+    <button class="btn ghost" id="toWords">이 단어로 시험지 만들기</button>
+    <button class="btn ghost hide" id="toXlsx">📊 엑셀로 받기</button>
+    <button class="btn ghost" id="clear">지우기</button>
+  </div>
+  <div class="hint">인쇄창에서 「PDF로 저장」을 고르시면 파일로 받습니다. 아래 보이는 것만 나갑니다.</div>
+</div>
+
+<div id="out"></div>
+
+</div>
+
+<script src="/config.js"></script>
+<script>
+// ── 작은 도우미 ──────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const 오늘 = () => new Date().toISOString().slice(0, 10);
+$("wDate").value = 오늘();
+
+function 알림(el, 글, 나쁜가) {
+  el.innerHTML = 글 ? `<div class="${나쁜가 ? "warn" : "ok"}">${글}</div>` : "";
+}
+
+// ── 탭 ─────────────────────────────────────────────────
+for (const t of document.querySelectorAll(".tab")) {
+  t.onclick = () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
+    $("p-words").classList.toggle("hide", t.dataset.t !== "words");
+    $("p-psg").classList.toggle("hide", t.dataset.t !== "psg");
+    $("p-scan").classList.toggle("hide", t.dataset.t !== "scan");
+    $("p-exam").classList.toggle("hide", true);               // 객관식 채점은 선물에서 뺐습니다
+    $("p-vocab").classList.toggle("hide", t.dataset.t !== "vocab");
+    if (t.dataset.t === "scan" || t.dataset.t === "vocab") 잠금확인();
+    if (t.dataset.t === "vocab") 채점준비();
+  };
+}
+
+// 시험지 종류 고르기 (하나만)
+let 종류 = "en2ko";
+for (const c of document.querySelectorAll("#kinds .chip")) {
+  c.onclick = () => {
+    종류 = c.dataset.k;
+    document.querySelectorAll("#kinds .chip").forEach((x) => x.classList.toggle("on", x === c));
+  };
+}
+
+// ── 붙여넣은 글 → 단어 목록 ───────────────────────────────
+// 탭·쉼표·여러 칸 전부 받습니다. 선생님이 어디서 복사해 오실지 모르니까요.
+// 「1. apple 사과」 처럼 앞에 번호가 붙어 와도 떼어냅니다.
+function 단어읽기(text) {
+  const out = [];
+  for (let line of String(text || "").split("\n")) {
+    line = line.trim().replace(/^\s*\d+[.)]\s*/, "");
+    if (!line) continue;
+    const m = line.split(/\t|,|\s{2,}|\s+[-–—:]\s+|\s+/);
+    const en = (m[0] || "").trim();
+    const ko = m.slice(1).join(" ").trim();
+    if (!en) continue;
+    out.push({ en, ko });
+  }
+  // 같은 낱말이 두 번 들어오면 하나로 (뜻이 있는 쪽을 남깁니다)
+  const map = new Map();
+  for (const w of out) {
+    const k = w.en.toLowerCase();
+    if (!map.has(k) || (!map.get(k).ko && w.ko)) map.set(k, w);
+  }
+  return [...map.values()];
+}
+
+function 세기() {
+  const n = 단어읽기($("wIn").value).length;
+  $("wc").textContent = n ? `${n}개` : "";
+}
+$("wIn").addEventListener("input", 세기);
+
+// 섞기 — 벌마다 다른 순서가 나오게
+function 섞어(arr, seed) {
+  const a = [...arr];
+  let s = seed * 9301 + 49297;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 9301 + 49297) % 233280;
+    const j = Math.floor((s / 233280) * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── 시험지 그리기 ──────────────────────────────────────
+function 이름칸(제목, 부제) {
+  return `<h3>${esc(제목)}</h3><div class="meta">${esc(부제)}</div>
+    <div class="namebar"><span>반 <i></i></span><span>이름 <i></i></span><span>점수 <i></i></span></div>`;
+}
+
+function 시험지(words, 제목, 부제, 종류) {
+  const 줄 = words.map((w, i) => {
+    const 왼 = 종류 === "ko2en" ? w.ko : w.en;
+    const 오 = ""; // 학생이 적는 칸
+    return `<tr><td class="n">${i + 1}</td><td class="a">${esc(왼)}</td><td class="b">${오}</td></tr>`;
+  }).join("");
+  return `<div class="sheet">${이름칸(제목, 부제)}
+    <div class="two"><table class="q"><tbody>${줄}</tbody></table></div></div>`;
+}
+
+function 정답지(묶음, 제목) {
+  const 몸 = 묶음.map(({ 이름, words }) => {
+    const 줄 = words.map((w, i) =>
+      `<tr><td class="n">${i + 1}</td><td class="a">${esc(w.en)}</td><td>${esc(w.ko)}</td></tr>`
+    ).join("");
+    return `<h3 style="margin-top:14px">${esc(이름)} 정답</h3>
+      <div class="two"><table class="q"><tbody>${줄}</tbody></table></div>`;
+  }).join("");
+  return `<div class="sheet"><h3>${esc(제목)} — 정답지</h3>
+    <div class="meta">선생님용 · 학생에게 주지 마세요</div>${몸}</div>`;
+}
+
+$("wGo").onclick = () => {
+  const all = 단어읽기($("wIn").value);
+  if (!all.length) return 알림($("wMsg"), "단어를 먼저 붙여넣어 주세요.", true);
+  const 빈뜻 = all.filter((w) => !w.ko).length;
+  const n = Math.min(Math.max(1, Number($("wN").value) || 20), all.length);
+  const 벌 = Number($("wForms").value) || 1;
+  const 제목 = $("wTitle").value.trim() || "단어시험";
+  const 날짜 = $("wDate").value || 오늘();
+
+  const 묶음 = [];
+  let html = "";
+  for (let f = 0; f < 벌; f++) {
+    const 이름 = 벌 > 1 ? `${제목} (${"ABCDE"[f]}형)` : 제목;
+    let 고른 = 섞어(all, f + 1).slice(0, n);
+    const k = 종류 === "mix" ? (f % 2 ? "ko2en" : "en2ko") : 종류;
+    // 섞기를 고르면 한 장 안에서도 방향이 섞이게
+    if (종류 === "mix") 고른 = 고른.map((w, i) => (i % 2 ? { ...w, _k: "ko2en" } : { ...w, _k: "en2ko" }));
+    html += 종류 === "mix"
+      ? 섞인시험지(고른, 이름, `${날짜} · ${고른.length}문항`)
+      : 시험지(고른, 이름, `${날짜} · ${고른.length}문항`, k);
+    묶음.push({ 이름, words: 고른 });
+  }
+  html += 정답지(묶음, 제목);
+  $("out").innerHTML = html;
+  $("actions").classList.remove("hide");
+  $("toWords").classList.add("hide");
+  알림($("wMsg"), 빈뜻
+    ? `시험지가 나왔습니다. <b>뜻이 빈 낱말이 ${빈뜻}개</b> 있어요 — 「뜻 채우기」를 눌러보세요.`
+    : "시험지가 나왔습니다. 위의 <b>📥 인쇄</b> 를 누르세요.", false);
+  $("out").scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+function 섞인시험지(words, 제목, 부제) {
+  const 줄 = words.map((w, i) => {
+    const 왼 = w._k === "ko2en" ? w.ko : w.en;
+    return `<tr><td class="n">${i + 1}</td><td class="a">${esc(왼)}</td><td class="b"></td></tr>`;
+  }).join("");
+  return `<div class="sheet">${이름칸(제목, 부제)}
+    <div class="two"><table class="q"><tbody>${줄}</tbody></table></div></div>`;
+}
+
+// 재시용 — 틀린 낱말만 남기게 안내합니다. 순서는 저절로 달라집니다.
+$("wRetest").onclick = () => {
+  알림($("wMsg"),
+    "틀린 낱말만 남기고 나머지는 지운 뒤 <b>시험지 만들기</b>를 누르세요. " +
+    "같은 낱말이어도 <b>순서가 달라집니다</b> — 외운 게 아니라 아는지 보려고요.", false);
+  $("wIn").focus();
+};
+
+// ── 뜻 채우기 (클로드) ───────────────────────────────────
+$("wFill").onclick = async () => {
+  const all = 단어읽기($("wIn").value);
+  const 빈것 = all.filter((w) => !w.ko);
+  if (!all.length) return 알림($("wMsg"), "단어를 먼저 붙여넣어 주세요.", true);
+  if (!빈것.length) return 알림($("wMsg"), "뜻이 다 채워져 있습니다.", false);
+  $("wFill").disabled = true;
+  알림($("wMsg"), `${빈것.length}개의 뜻을 채우는 중…`, false);
+  try {
+    const r = await fetch("/api/make", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "meanings", words: all }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "실패");
+    $("wIn").value = d.words.map((w) => `${w.en} ${w.ko}`.trim()).join("\n");
+    세기();
+    알림($("wMsg"), "뜻을 채웠습니다. <b>틀린 게 없는지 한 번 보시고</b> 시험지를 만드세요.", false);
+  } catch (e) {
+    알림($("wMsg"), esc(e.message), true);
+  }
+  $("wFill").disabled = false;
+};
+
+// ── 지문 만들기 ─────────────────────────────────────────
+let 마지막지문 = null;
+
+$("pStatus").onclick = async () => {
+  try {
+    const r = await fetch("/api/make", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "status" }),
+    });
+    const d = await r.json();
+    알림($("pMsg"), esc(d.detail || ""), !d.claude);
+  } catch (e) {
+    알림($("pMsg"), "서버에 못 닿았습니다. 배포가 끝났는지 보세요.", true);
+  }
+};
+
+$("pGo").onclick = async () => {
+  $("pGo").disabled = true;
+  알림($("pMsg"), "지문을 쓰는 중… 20초쯤 걸립니다.", false);
+  try {
+    const r = await fetch("/api/make", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "passage",
+        topic: $("pTopic").value.trim(),
+        level: $("pLevel").value,
+        grammar: $("pGram").value.trim(),
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "실패");
+    마지막지문 = d;
+    그리기지문(d);
+    알림($("pMsg"), "나왔습니다. <b>꼭 한 번 읽어보세요.</b>", false);
+  } catch (e) {
+    알림($("pMsg"), esc(e.message), true);
+  }
+  $("pGo").disabled = false;
+};
+
+function 그리기지문(d) {
+  const 단어 = d.words.map((w, i) =>
+    `<tr><td class="n">${i + 1}</td><td class="a">${esc(w.en)}</td><td class="b"></td></tr>`).join("");
+  const 문제 = d.quiz.map((q, i) => `<div class="quiz">
+      <div class="qq">${i + 1}. ${esc(q.q)}</div>
+      <div class="cc">${q.choices.map(esc).join("<br>")}</div></div>`).join("");
+  const 답 = d.quiz.map((q, i) =>
+    `${i + 1}. <b>${esc(q.choices[q.answer] ?? "")}</b>${q.why ? ` — ${esc(q.why)}` : ""}`).join("<br>");
+
+  $("out").innerHTML = `
+    <div class="sheet">
+      ${이름칸(d.title || "Reading", `${$("pLevel").value} · ${$("wDate").value || 오늘()}`)}
+      <div class="psg">${esc(d.passage)}</div>
+      <h3 style="font-size:15px;margin-bottom:6px">Words</h3>
+      <div class="two"><table class="q"><tbody>${단어}</tbody></table></div>
+      <h3 style="font-size:15px;margin:16px 0 6px">Questions</h3>
+      ${문제}
+    </div>
+    <div class="sheet">
+      <h3>${esc(d.title || "Reading")} — 선생님용</h3>
+      <div class="meta">정답 · 해석 · 단어 뜻 (학생에게 주지 마세요)</div>
+      <div class="ansbox" style="margin-bottom:14px">${답}</div>
+      <h3 style="font-size:15px;margin-bottom:6px">해석</h3>
+      <div class="psg" style="font-size:14px">${esc(d.trans)}</div>
+      <h3 style="font-size:15px;margin:14px 0 6px">단어 뜻</h3>
+      <div class="two"><table class="q"><tbody>${
+        d.words.map((w, i) => `<tr><td class="n">${i + 1}</td><td class="a">${esc(w.en)}</td><td>${esc(w.ko)}</td></tr>`).join("")
+      }</tbody></table></div>
+    </div>`;
+  $("actions").classList.remove("hide");
+  $("toWords").classList.remove("hide");
+  $("out").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ★ 두 도구를 잇는 자리 — 지문에서 뽑은 단어를 그대로 시험지로
+$("toWords").onclick = () => {
+  // 지문 만들기에서 왔으면 그 단어를, 스캐너에서 왔으면 스캔한 단어를 가져옵니다.
+  const 목록 = 마지막스캔?.vocabulary?.length
+    ? 마지막스캔.vocabulary.map((w) => ({ en: w.word, ko: w.meaning_ko }))
+    : (마지막지문?.words ?? []);
+  const 제목 = (마지막스캔?.title || 마지막지문?.title || "Reading");
+  if (!목록.length) return;
+  $("wIn").value = 목록.map((w) => `${w.en} ${w.ko}`.trim()).join("\n");
+  $("wTitle").value = 제목 + " 단어시험";
+  세기();
+  document.querySelector('.tab[data-t="words"]').click();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  알림($("wMsg"), `단어 ${목록.length}개를 가져왔습니다. <b>시험지 만들기</b>를 누르세요.`, false);
+};
+
+
+// ══════════ 외부지문 스캐너 ══════════
+//
+// ★ 사진을 **보내기 전에 브라우저에서 줄입니다** (긴 변 1600px, JPEG).
+//   폰 사진은 한 장에 4~8MB 라 두 장만 올려도 서버 한도를 넘습니다.
+//   줄이면 한 장에 200~400KB 가 됩니다.
+const 긴변 = 1600;
+const 서버한도 = 4 * 1024 * 1024; // Vercel 본문 한도 (넉넉히 아래에서 자릅니다)
+let 사진 = []; // [{name, media_type, data(base64), bytes, url}]
+
+async function 줄이기(file, 긴변쪽 = 긴변) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => no(new Error(`${file.name} — 사진을 못 읽었습니다`));
+      i.src = url;
+    });
+    const 비율 = Math.min(1, 긴변쪽 / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * 비율));
+    const h = Math.max(1, Math.round(img.height * 비율));
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, w, h);   // 투명 PNG 가 검게 나오지 않게
+    g.drawImage(img, 0, 0, w, h);
+    const dataUrl = c.toDataURL("image/jpeg", 0.82);
+    const base64 = dataUrl.split(",")[1] || "";
+    return {
+      name: file.name, media_type: "image/jpeg", data: base64,
+      bytes: Math.round(base64.length * 0.75), url: dataUrl,
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function 사진그리기() {
+  const 합 = 사진.reduce((a, b) => a + b.bytes, 0);
+  $("imgC").textContent = 사진.length ? `${사진.length}장 · ${(합 / 1024 / 1024).toFixed(1)}MB` : "";
+  $("thumbs").innerHTML = 사진.map((im, i) =>
+    `<figure><img src="${im.url}" alt=""><button data-i="${i}" title="빼기">×</button>
+     <figcaption>${(im.bytes / 1024).toFixed(0)}KB</figcaption></figure>`).join("");
+  for (const b of $("thumbs").querySelectorAll("button")) {
+    b.onclick = () => { 사진.splice(Number(b.dataset.i), 1); 사진그리기(); };
+  }
+  // 한도를 넘으면 **보내기 전에** 알려줍니다 — 눌러놓고 1분 뒤 실패하면 더 나쁩니다
+  if (합 > 서버한도) {
+    알림($("scanMsg"),
+      `사진이 <b>${(합 / 1024 / 1024).toFixed(1)}MB</b> 라 한 번에 못 보냅니다. ` +
+      `<b>몇 장 빼고 나눠서</b> 올려주세요 (보통 4~5장까지 됩니다).`, true);
+  } else if (사진.length) {
+    알림($("scanMsg"), "", false);
+  }
+}
+
+$("imgs").onchange = async (e) => {
+  const files = [...(e.target.files || [])];
+  if (!files.length) return;
+  알림($("scanMsg"), `사진 ${files.length}장을 줄이는 중…`, false);
+  for (const f of files) {
+    if (!/^image\//.test(f.type)) continue;
+    try { 사진.push(await 줄이기(f)); } catch (err) { console.warn(err); }
+  }
+  e.target.value = "";
+  사진그리기();
+};
+
+$("imgClear").onclick = () => { 사진 = []; 사진그리기(); 알림($("scanMsg"), "", false); };
+
+// ── 선생님 잠금 ────────────────────────────────────────
+async function 잠금확인() {
+  try {
+    const d = await (await fetch("/api/login")).json();
+    const 잠김 = d.locked && !d.ok;
+    $("lockBox").classList.toggle("hide", !잠김);
+    $("scanBody").classList.toggle("hide", 잠김);
+    if (!d.locked) {
+      알림($("scanMsg"),
+        "⚠️ <b>이 화면이 잠겨 있지 않습니다.</b> 주소를 아는 사람은 누구나 들어옵니다 — " +
+        "Vercel 환경변수 <code>TEACHER_PASS</code> 를 넣고 Redeploy 하세요.", true);
+    }
+  } catch { /* 로컬에서 열었을 때 등 — 그냥 둡니다 */ }
+}
+
+$("pwGo").onclick = async () => {
+  try {
+    const r = await fetch("/api/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pass: $("pw").value }),
+    });
+    const d = await r.json();
+    if (!r.ok) return 알림($("pwMsg"), esc(d.error || "실패"), true);
+    $("pw").value = "";
+    알림($("pwMsg"), "", false);
+    잠금확인();
+  } catch (e) { 알림($("pwMsg"), "서버에 못 닿았습니다.", true); }
+};
+
+// ── 분석 ──────────────────────────────────────────────
+let 마지막스캔 = null;
+
+$("scanGo").onclick = async () => {
+  if (!사진.length) return 알림($("scanMsg"), "사진을 먼저 올려주세요.", true);
+  const 합 = 사진.reduce((a, b) => a + b.bytes, 0);
+  if (합 > 서버한도) return 사진그리기();
+
+  $("scanGo").disabled = true;
+  알림($("scanMsg"), "사진을 읽는 중… <b>30초~1분</b> 걸립니다. 창을 닫지 마세요.", false);
+  try {
+    const r = await fetch("/api/scan", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: 사진.map(({ media_type, data }) => ({ media_type, data })) }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "실패");
+    마지막스캔 = d;
+    그리기스캔(d);
+    알림($("scanMsg"),
+      (d.warn ? `⚠️ ${esc(d.warn)}<br>` : "") +
+      "나왔습니다. <b>본문이 사진과 같은지 꼭 대조하세요.</b>", Boolean(d.warn));
+  } catch (e) {
+    알림($("scanMsg"), esc(e.message), true);
+  }
+  $("scanGo").disabled = false;
+};
+
+function 그리기스캔(d) {
+  const 머리 = [d.school, d.grade, d.title, d.source].filter(Boolean).join(" · ");
+  const 문장 = d.sentences.map((s, i) =>
+    `<tr><td class="n">${i + 1}</td><td class="a">${esc(s.en)}</td><td>${esc(s.ko)}</td></tr>`).join("");
+  const 단어 = d.vocabulary.map((w, i) => `<tr>
+      <td class="n">${i + 1}</td>
+      <td class="a"><b>${esc(w.word)}</b><br><span style="color:#677872">${esc(w.meaning_ko)}</span></td>
+      <td>${esc(w.eng_definition)}
+        ${w.synonyms.length ? `<br><span style="color:#677872">= ${esc(w.synonyms.join(", "))}</span>` : ""}
+        ${w.antonyms.length ? `<br><span style="color:#677872">↔ ${esc(w.antonyms.join(", "))}</span>` : ""}
+        ${w.example ? `<br><i>${esc(w.example)}</i>` : ""}</td>
+    </tr>`).join("");
+
+  $("out").innerHTML = `
+    <div class="sheet">
+      <h3>${esc(d.title || "외부지문")}</h3>
+      <div class="meta">${esc(머리 || "사진에서 읽은 지문")}</div>
+      <div class="psg">${esc(d.passage)}</div>
+    </div>
+    <div class="sheet">
+      <h3>문장별 해석</h3>
+      <div class="meta">${d.sentences.length}문장</div>
+      <table class="q"><tbody>${문장}</tbody></table>
+    </div>
+    <div class="sheet">
+      <h3>단어장</h3>
+      <div class="meta">${d.vocabulary.length}개</div>
+      <table class="q"><tbody>${단어}</tbody></table>
+    </div>`;
+  $("actions").classList.remove("hide");
+  $("toWords").classList.remove("hide");
+  $("toXlsx").classList.remove("hide");
+  $("out").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ── 엑셀로 받기 (시트 2개) ─────────────────────────────
+$("toXlsx").onclick = () => {
+  if (!마지막스캔) return;
+  if (typeof XLSX === "undefined")
+    return 알림($("scanMsg"), "엑셀 만드는 도구를 못 불러왔습니다. 새로고침해 보세요.", true);
+  const d = 마지막스캔;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+    d.vocabulary.map((w, i) => ({
+      번호: i + 1, 단어: w.word, 뜻: w.meaning_ko, 영영풀이: w.eng_definition,
+      동의어: w.synonyms.join(", "), 반의어: w.antonyms.join(", "), 예문: w.example,
+    }))), "단어");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(
+    d.sentences.map((s, i) => ({ 번호: i + 1, 영어: s.en, 해석: s.ko }))), "문장");
+  const 이름 = (d.title || "외부지문").replace(/[\\/:*?"<>|]/g, "") + ".xlsx";
+  XLSX.writeFile(wb, 이름);
+};
+
+
+// ══════════ 자동 채점 (선생님) ══════════
+let 문항들 = [];
+
+$("examUrl").textContent = location.origin + "/exam.html";
+$("copyUrl").onclick = async () => {
+  const 글 = location.origin + "/exam.html";
+  try { await navigator.clipboard.writeText(글); $("copyUrl").textContent = "✅ 복사됨";
+        setTimeout(() => ($("copyUrl").textContent = "📋 복사"), 1400); } catch {}
+};
+
+async function 시험부르기(action, more = {}) {
+  const r = await fetch("/api/exam", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, ...more }),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "실패");
+  return d;
+}
+
+// 정답을 나눠 **저장 전에 보여줍니다** — 잘못 읽혔으면 여기서 보입니다
+$("exParse").onclick = async () => {
+  try {
+    const d = await 시험부르기("parse", { text: $("exAns").value });
+    if (!d.count) { 문항들 = []; $("exTable").innerHTML = ""; return 알림($("exMsg"), esc(d.help), true); }
+    const n = Math.max(Number($("exN").value) || d.count, Math.max(...Object.keys(d.answers).map(Number)));
+    문항들 = [];
+    for (let i = 1; i <= n; i++) {
+      문항들.push({ no: i, kind: d.answers[i] ? "choice" : "essay",
+                   answers: d.answers[i] ?? [], model: "", why: "", point: 1 });
+    }
+    그리기문항();
+    알림($("exMsg"),
+      `정답 <b>${d.count}문항</b>을 읽었습니다. 나머지는 <b>서술형</b>으로 뒀어요 — ` +
+      `아래에서 종류·배점·모범답안·해설을 고치시고 저장하세요.`, false);
+  } catch (e) { 알림($("exMsg"), esc(e.message), true); }
+};
+
+function 그리기문항() {
+  $("exTable").innerHTML = `<table class="q" style="margin-top:12px"><thead><tr>
+      <th style="width:38px">번호</th><th style="width:96px">종류</th><th>정답 / 모범답안</th>
+      <th style="width:62px">배점</th><th>해설 (선택)</th></tr></thead><tbody>${
+    문항들.map((it, i) => `<tr>
+      <td class="n">${it.no}</td>
+      <td><select data-f="kind" data-i="${i}">
+        <option value="choice"${it.kind==="choice"?" selected":""}>객관식</option>
+        <option value="essay"${it.kind==="essay"?" selected":""}>서술형</option></select></td>
+      <td>${it.kind === "choice"
+        ? `<input data-f="answers" data-i="${i}" value="${esc(it.answers.join(","))}" placeholder="3 또는 1,4">`
+        : `<input data-f="model" data-i="${i}" value="${esc(it.model)}" placeholder="모범답안">`}</td>
+      <td><input data-f="point" data-i="${i}" type="number" min="0" step="0.5" value="${it.point}"></td>
+      <td><input data-f="why" data-i="${i}" value="${esc(it.why)}" placeholder=""></td>
+    </tr>`).join("")}</tbody></table>`;
+  for (const el of $("exTable").querySelectorAll("[data-f]")) {
+    el.onchange = () => {
+      const i = Number(el.dataset.i), f = el.dataset.f;
+      if (f === "answers") 문항들[i].answers = el.value.split(/[,\s]+/).map(Number).filter(Boolean);
+      else if (f === "point") 문항들[i].point = Number(el.value) || 1;
+      else 문항들[i][f] = el.value;
+      if (f === "kind") 그리기문항();   // 칸이 바뀌어야 하므로 다시 그림
+    };
+  }
+}
+
+$("exSave").onclick = async () => {
+  if (!문항들.length) return 알림($("exMsg"), "먼저 <b>정답 나누기</b>를 눌러주세요.", true);
+  const 빈것 = 문항들.filter((it) => it.kind === "choice" && !it.answers.length);
+  if (빈것.length && !confirm(`정답이 빈 객관식이 ${빈것.length}개 있습니다. 그 문항은 채점에서 빠집니다. 저장할까요?`)) return;
+  try {
+    const d = await 시험부르기("save", { title: $("exTitle").value, items: 문항들 });
+    알림($("exMsg"), "저장했습니다. 학생에게 주소를 알려주세요.", false);
+    문항들 = []; $("exTable").innerHTML = ""; $("exAns").value = ""; $("exTitle").value = "";
+    시험지목록(d.id);
+  } catch (e) { 알림($("exMsg"), esc(e.message), true); }
+};
+
+async function 시험지목록(고를것) {
+  try {
+    const d = await 시험부르기("exams");
+    $("exPick").innerHTML = `<option value="">시험지를 고르세요</option>` +
+      d.exams.map((e) => `<option value="${e.id}">${esc(e.title)} (${e.total}문항)</option>`).join("");
+    if (고를것) { $("exPick").value = 고를것; $("exPick").onchange(); }
+  } catch { /* 잠겨 있거나 표가 없을 때 — 조용히 */ }
+}
+
+$("exPick").onchange = async () => {
+  const id = $("exPick").value;
+  if (!id) return ($("exResult").innerHTML = "");
+  try {
+    const d = await 시험부르기("result", { examId: id });
+    그리기결과(d);
+  } catch (e) { 알림($("exMsg"), esc(e.message), true); }
+};
+
+function 그리기결과(d) {
+  if (!d.rows.length) {
+    $("exResult").innerHTML = `<p class="hint" style="margin-top:10px">아직 푼 학생이 없습니다.</p>`;
+    return;
+  }
+  const 줄 = d.rows.map((r) => {
+    const 끝남 = r.stage === "done" && r.score != null;
+    const 틀린 = (r.wrong ?? []).join(", ") || "없음";
+    return `<tr${끝남 ? "" : ' style="color:#a0aeb4"'} title="틀린 번호: ${esc(틀린)}">
+      <td>${esc(r.name || r.student_id)}</td>
+      <td>${끝남 ? `<b>${r.score}</b> / ${r.max_score}` : "<i>푸는 중</i>"}</td>
+      <td style="font-size:12.5px">${esc(틀린)}</td>
+      <td style="font-size:12.5px">${(r.fixed ?? []).join(", ") || "—"}</td>
+      <td><button class="btn ghost sm" data-wrong="${esc(r.student_id)}">오답 프린트</button></td></tr>`;
+  }).join("");
+
+  const 자주 = d.often.length
+    ? d.often.map((o) => `<span class="chip" style="cursor:default">${o.no}번 · ${o.cnt}명</span>`).join("")
+    : `<span class="hint">아직 없습니다</span>`;
+
+  $("exResult").innerHTML = `
+    <p class="hint" style="margin:10px 0 6px">${d.people}명 · <b>흐린 줄</b>은 아직 다 안 끝낸 학생입니다.
+      마우스를 올리면 틀린 번호가 보입니다.</p>
+    <table class="q"><thead><tr><th>학생</th><th style="width:88px">점수</th>
+      <th>틀린 번호</th><th>다시 맞힘</th><th style="width:104px"></th></tr></thead>
+      <tbody>${줄}</tbody></table>
+    <h3 style="font-size:14.5px;margin:14px 0 6px;color:var(--green)">자주 틀린 번호</h3>
+    <div class="chips">${자주}</div>`;
+
+  for (const b of $("exResult").querySelectorAll("[data-wrong]")) {
+    b.onclick = () => 오답프린트($("exPick").value, b.dataset.wrong);
+  }
+}
+
+// 틀린 문제만 모아 인쇄 — 결과 자리에 그리고 바로 인쇄창을 엽니다
+async function 오답프린트(examId, studentId) {
+  try {
+    const d = await 시험부르기("wrongsheet", { examId, studentId });
+    const 동글 = (v) => {
+      const a = Array.isArray(v) ? v : (v == null || v === "" ? [] : [v]);
+      return a.map((n) => "①②③④⑤"[Number(n) - 1] ?? String(n)).join(" ") || "—";
+    };
+    $("out").innerHTML = `<div class="sheet">
+      <h3>${esc(d.title)} — 오답 노트</h3>
+      <div class="meta">${esc(d.name || d.studentId)} · 틀린 ${d.items.length}문항</div>
+      <table class="q"><thead><tr><th style="width:38px">번호</th><th>내 답</th>
+        <th>다시 푼 답</th><th>정답</th><th>해설</th></tr></thead><tbody>${
+      d.items.map((it) => `<tr><td class="n">${it.no}</td>
+        <td>${it.kind === "essay" ? esc(it.mine || "안 씀") : 동글(it.mine)}</td>
+        <td>${d.fixed.includes(it.no) ? "<b>맞힘</b> " : ""}${it.kind === "essay" ? "—" : 동글(it.again)}</td>
+        <td><b>${it.kind === "essay" ? esc(it.model || "—") : 동글(it.answers)}</b></td>
+        <td style="font-size:12.5px">${esc(it.why || "")}</td></tr>`).join("")}</tbody></table>
+    </div>`;
+    $("actions").classList.remove("hide");
+    $("toWords").classList.add("hide"); $("toXlsx").classList.add("hide");
+    $("out").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) { 알림($("exMsg"), esc(e.message), true); }
+}
+
+
+// ══════════ 단어 사진 채점 (선생님) ══════════
+let 정답표초안 = [];
+let 채점결과 = null;
+const 시험지사진 = [];   // 학생 시험지 (한 장)
+const 답지사진 = [];     // 답지 (여러 장)
+
+async function 단어부르기(action, more = {}) {
+  const r = await fetch("/api/vocab", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, ...more }),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "실패");
+  return d;
+}
+
+// 작은 탭 (①②③)
+for (const t of document.querySelectorAll("#p-vocab .tab")) {
+  t.onclick = () => {
+    document.querySelectorAll("#p-vocab .tab").forEach((x) => x.classList.toggle("on", x === t));
+    for (const k of ["shot", "key", "log"]) $(`v-${k}`).classList.toggle("hide", t.dataset.v !== k);
+  };
+}
+
+async function 채점준비() {
+  try {
+    const d = await 단어부르기("setup");
+    $("vStu").innerHTML = `<option value="">고르세요</option>` +
+      d.students.map((s) => `<option value="${esc(s.student_id)}">${esc(s.name || s.student_id)}</option>`).join("");
+    그리기단어장(d.keys);
+    if (!d.ai) 알림($("vMsg"), "⚠️ <b>ANTHROPIC_API_KEY 가 없습니다.</b> 사진 채점이 안 됩니다.", true);
+    $("lDate").value = $("lDate").value || new Date().toISOString().slice(0, 10);
+  } catch (e) { 알림($("vMsg"), esc(e.message), true); }
+}
+
+function 그리기단어장(keys) {
+  $("kList").innerHTML = keys.length
+    ? `<table class="q"><tbody>${keys.map((k) => `<tr>
+        <td class="a"><b>${esc(k.book)}</b> · Day ${esc(k.day)}</td>
+        <td>${k.mode === "spell" ? "스펠 쓰기" : "뜻 쓰기"}</td>
+        <td>${(k.items || []).length}개</td></tr>`).join("")}</tbody></table>`
+    : `<span class="hint">아직 없습니다. 위에서 만들어 두시면 다음부터 바로 채점됩니다.</span>`;
+}
+
+// ── 사진 고르기 (스캐너의 줄이기를 그대로 씁니다. 단어 시험지는 글씨가 작아 2000px) ──
+async function 사진담기(input, 담을곳, 그릴곳, 한장만) {
+  const files = [...(input.files || [])];
+  if (!files.length) return;
+  if (한장만) 담을곳.length = 0;
+  for (const f of files) {
+    if (!/^image\//.test(f.type)) continue;
+    try { 담을곳.push(await 줄이기(f, 2000)); } catch (e) { console.warn(e); }
+    if (한장만) break;
+  }
+  input.value = "";
+  $(그릴곳).innerHTML = 담을곳.map((im, i) =>
+    `<figure><img src="${im.url}" alt=""><button data-i="${i}">×</button>
+     <figcaption>${(im.bytes / 1024).toFixed(0)}KB</figcaption></figure>`).join("");
+  for (const b of $(그릴곳).querySelectorAll("button"))
+    b.onclick = () => { 담을곳.splice(Number(b.dataset.i), 1); 사진담기({ files: [] }, 담을곳, 그릴곳, 한장만); };
+}
+$("vImg").onchange = (e) => 사진담기(e.target, 시험지사진, "vThumb", true);
+$("kImg").onchange = (e) => 사진담기(e.target, 답지사진, "kThumb", false);
+
+// ── ① 채점 ──
+$("vGo").onclick = async () => {
+  if (!시험지사진.length) return 알림($("vMsg"), "시험지 사진을 올려주세요.", true);
+  $("vGo").disabled = true;
+  알림($("vMsg"), "사진을 읽고 채점하는 중… <b>30초~1분</b> 걸립니다.", false);
+  try {
+    const sel = $("vStu");
+    const d = await 단어부르기("grade", {
+      images: 시험지사진.map(({ media_type, data }) => ({ media_type, data })),
+      studentId: sel.value, name: sel.selectedOptions[0]?.textContent || "",
+      book: $("vBook").value, day: $("vDay").value, mode: $("vMode").value,
+    });
+    if (d.needKey) {
+      알림($("vMsg"), `${esc(d.message)} 아래 <b>② 정답표 만들기</b> 로 가세요.`, true);
+      $("kBook").value = d.head.book; $("kDay").value = d.head.day; $("kMode").value = d.head.mode;
+      // 읽은 낱말을 초안으로 깔아줍니다 — 뜻만 채우면 됩니다
+      정답표초안 = (d.read?.items ?? []).map((x, i) => ({ no: i + 1, word: x.printed, meanings: [] }));
+      그리기초안();
+      document.querySelector('#p-vocab .tab[data-v="key"]').click();
+    } else {
+      채점결과 = d;
+      그리기채점(d);
+      알림($("vMsg"), d.noKey
+        ? "⚠️ <b>정답표 없이 채점했습니다.</b> 애매한 것은 ❓ 로 뒀어요 — 한 번 봐주세요."
+        : "채점했습니다. <b>틀린 것이 맞는지 한 번 보시고</b> 확정하세요.", Boolean(d.noKey));
+    }
+  } catch (e) { 알림($("vMsg"), esc(e.message), true); }
+  $("vGo").disabled = false;
+};
+
+const 표시 = { ok: "✅", no: "❌", q: "❓", blank: "❌", ask: "❓" };
+function 그리기채점(d) {
+  const 줄 = d.items.map((it) => `<tr data-no="${it.no}">
+    <td class="n">${it.no}</td>
+    <td class="a">${esc(it.printed)}</td>
+    <td>${it.written ? esc(it.written) : '<span style="color:#a0aeb4">안 씀</span>'}</td>
+    <td style="color:#677872">${esc(it.key || "—")}</td>
+    <td style="white-space:nowrap">
+      <button class="mk${it.mark === "ok" ? " on" : ""}" data-no="${it.no}" data-m="ok">✅</button>
+      <button class="mk${it.mark === "no" || it.mark === "blank" ? " on" : ""}" data-no="${it.no}" data-m="no">❌</button>
+      <button class="mk${it.mark === "q" ? " on" : ""}" data-no="${it.no}" data-m="q">❓</button>
+    </td></tr>`).join("");
+  $("vResult").innerHTML = `
+    <div class="ok" style="margin-top:14px">
+      <b style="font-size:19px">${esc(d.score_text)}</b> · ${d.total}문항 중 ${d.wrong}개 틀림
+      ${d.retest ? ' · <b style="color:#b4472e">재시</b>' : ' · <b>통과</b>'}
+      ${d.noKey ? ' · <span style="color:#b4472e">정답표 없이 채점</span>' : ""}
+    </div>
+    ${d.photo ? `<img class="shot" src="${d.photo}" alt="시험지" style="margin:10px 0;max-height:320px">` : ""}
+    <table class="q"><thead><tr><th style="width:36px">#</th><th>인쇄된 것</th>
+      <th>학생 답</th><th>정답</th><th style="width:130px">판정</th></tr></thead><tbody>${줄}</tbody></table>
+    <div class="btns">
+      <button class="btn" data-conf="pass">통과로 확정</button>
+      <button class="btn ghost" data-conf="retest">재시로 확정</button>
+    </div>`;
+  붙이기판정(d.id);
+}
+
+function 붙이기판정(id) {
+  for (const b of $("vResult").querySelectorAll(".mk")) {
+    b.onclick = async () => {
+      const no = Number(b.dataset.no), mark = b.dataset.m;
+      // 뜻 쓰기에서 ❌ → ✅ 로 고치면 「이 뜻도 맞음」으로 정답표에 더할지 물어봅니다
+      let 더할까 = false;
+      if (mark === "ok" && 채점결과?.head?.mode === "meaning") {
+        const 쓴것 = 채점결과.items.find((x) => x.no === no)?.written;
+        if (쓴것) 더할까 = confirm(`「${쓴것}」 도 맞는 뜻으로 정답표에 넣을까요?\n(다음부터는 바로 맞게 됩니다)`);
+      }
+      try {
+        const d = await 단어부르기("fix", { id, no, mark, addMeaning: 더할까 });
+        채점결과 = { ...채점결과, ...d, id };
+        그리기채점({ ...채점결과, photo: 채점결과.photo });
+        if (d.added) 알림($("vMsg"), `「${esc(d.added)}」 를 정답표에 넣었습니다.`, false);
+      } catch (e) { 알림($("vMsg"), esc(e.message), true); }
+    };
+  }
+  for (const b of $("vResult").querySelectorAll("[data-conf]")) {
+    b.onclick = async () => {
+      try {
+        const d = await 단어부르기("confirm", { id, status: b.dataset.conf });
+        알림($("vMsg"), d.status === "retest" ? "<b>재시</b>로 기록했습니다." : "<b>통과</b>로 기록했습니다.", false);
+      } catch (e) { 알림($("vMsg"), esc(e.message), true); }
+    };
+  }
+}
+
+// ── ② 정답표 ──
+$("kRead").onclick = async () => {
+  if (!답지사진.length) return 알림($("kMsg"), "답지 사진을 올려주세요.", true);
+  $("kRead").disabled = true;
+  알림($("kMsg"), "답지를 읽는 중…", false);
+  try {
+    const d = await 단어부르기("key-read", { images: 답지사진.map(({ media_type, data }) => ({ media_type, data })) });
+    if (d.head.book && !$("kBook").value) $("kBook").value = d.head.book;
+    if (d.head.day && !$("kDay").value) $("kDay").value = d.head.day;
+    정답표초안 = d.items;
+    그리기초안();
+    알림($("kMsg"), `<b>${d.items.length}개</b>를 읽었습니다. <b>틀린 데가 없는지 보시고</b> 저장하세요.`, false);
+  } catch (e) { 알림($("kMsg"), esc(e.message), true); }
+  $("kRead").disabled = false;
+};
+
+$("kParse").onclick = async () => {
+  try {
+    const d = await 단어부르기("key-paste", { text: $("kPaste").value });
+    if (!d.items.length) return 알림($("kMsg"), esc(d.help), true);
+    정답표초안 = d.items;
+    그리기초안();
+    알림($("kMsg"), `<b>${d.items.length}개</b>를 읽었습니다.`, false);
+  } catch (e) { 알림($("kMsg"), esc(e.message), true); }
+};
+
+function 그리기초안() {
+  $("kTable").innerHTML = 정답표초안.length ? `<table class="q" style="margin-top:12px">
+    <thead><tr><th style="width:36px">#</th><th>단어</th><th>뜻 (쉼표로 여러 개)</th></tr></thead>
+    <tbody>${정답표초안.map((it, i) => `<tr>
+      <td class="n">${it.no}</td>
+      <td><input data-k="word" data-i="${i}" value="${esc(it.word)}"></td>
+      <td><input data-k="meanings" data-i="${i}" value="${esc((it.meanings || []).join(", "))}"></td>
+    </tr>`).join("")}</tbody></table>` : "";
+  for (const el of $("kTable").querySelectorAll("[data-k]")) {
+    el.onchange = () => {
+      const i = Number(el.dataset.i);
+      if (el.dataset.k === "word") 정답표초안[i].word = el.value;
+      else 정답표초안[i].meanings = el.value.split(/[,，/]/).map((x) => x.trim()).filter(Boolean);
+    };
+  }
+}
+
+$("kSave").onclick = async () => {
+  if (!정답표초안.length) return 알림($("kMsg"), "먼저 사진에서 읽거나 붙여넣어 주세요.", true);
+  const 빈뜻 = 정답표초안.filter((x) => !(x.meanings || []).length).length;
+  if (빈뜻 && !confirm(`뜻이 빈 단어가 ${빈뜻}개 있습니다. 그 문항은 ❓ 로 나옵니다. 저장할까요?`)) return;
+  try {
+    const d = await 단어부르기("key-save", {
+      book: $("kBook").value, day: $("kDay").value, mode: $("kMode").value, items: 정답표초안,
+    });
+    알림($("kMsg"), `정답표를 저장했습니다 (${d.count}개). 이제 사진만 올리면 채점됩니다.`, false);
+    const s2 = await 단어부르기("setup");
+    그리기단어장(s2.keys);
+  } catch (e) { 알림($("kMsg"), esc(e.message), true); }
+};
+
+// ── ③ 결과 ──
+$("lGo").onclick = async () => {
+  try {
+    const d = await 단어부르기("list", { date: $("lDate").value, onlyRetest: $("lRetest").checked });
+    $("lList").innerHTML = d.rows.length ? `<table class="q" style="margin-top:12px">
+      <thead><tr><th>학생</th><th>교재 · Day</th><th>점수</th><th>상태</th><th></th></tr></thead>
+      <tbody>${d.rows.map((r) => `<tr>
+        <td class="a">${esc(r.name || r.student_id || "—")}</td>
+        <td style="font-size:12.5px">${esc(r.book || "")} ${esc(r.day || "")}
+          <span style="color:#677872">${r.mode === "spell" ? "스펠" : "뜻"}</span></td>
+        <td><b>${esc(r.score_text || "")}</b></td>
+        <td>${r.status === "retest" ? '<b style="color:#b4472e">재시</b>'
+             : r.status === "pass" ? "통과" : '<span style="color:#a0aeb4">확인 전</span>'}
+          ${r.no_key ? ' <span style="color:#b4472e;font-size:11.5px">정답표 없음</span>' : ""}</td>
+        <td><button class="btn ghost sm" data-one="${r.id}">열기</button></td></tr>`).join("")}</tbody></table>`
+      : `<p class="hint" style="margin-top:10px">그날 채점한 것이 없습니다.</p>`;
+    for (const b of $("lList").querySelectorAll("[data-one]")) {
+      b.onclick = async () => {
+        try {
+          const o = await 단어부르기("one", { id: b.dataset.one });
+          채점결과 = { ...o.scan, id: o.scan.id, photo: o.photo, retest: o.retest,
+                       head: { book: o.scan.book, day: o.scan.day, mode: o.scan.mode }, noKey: o.scan.no_key };
+          $("vResult").innerHTML = "";
+          그리기채점(채점결과);
+          $("lOne").innerHTML = "";
+          $("vResult").scrollIntoView({ behavior: "smooth", block: "start" });
+          document.querySelector('#p-vocab .tab[data-v="shot"]').click();
+        } catch (e) { 알림($("vMsg"), esc(e.message), true); }
+      };
+    }
+  } catch (e) { 알림($("vMsg"), esc(e.message), true); }
+};
+
+$("clear").onclick = () => {
+  $("out").innerHTML = "";
+  $("actions").classList.add("hide");
+  $("toXlsx").classList.add("hide");
+};
+</script>
+</body>
+</html>
